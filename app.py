@@ -3,20 +3,34 @@ import pandas as pd
 import joblib
 from fastai.vision.all import *
 from PIL import Image
+import pathlib
+import platform
 
+# --- ส่วนแก้ปัญหา Path และการโหลดโมเดล ---
+if platform.system() != 'Windows':
+    pathlib.WindowsPath = pathlib.PosixPath
 
+# สำคัญมาก: สร้างฟังก์ชันหลอกสำหรับ DataLoaders 
+# เพื่อให้ fastai โหลดโมเดลผ่านโดยไม่สนเรื่อง dls เก่า
+def label_func(x): return x  
 
 @st.cache_resource
 def load_models():
+    # 1. โหลดโมเดลราคาบ้าน
     rf_data = joblib.load('house_price_rf.pkl')
-    rf_model = rf_data['model']
-    rf_columns = rf_data['columns']
     
-    cnn_model = load_learner('room_classifier_fastai.pkl')
+    # 2. โหลดโมเดล FastAI
+    # ใช้ load_learner ปกติได้เลยหลังจากที่เราแก้ pathlib ด้านบนแล้ว
+    cnn = load_learner('room_classifier_fastai.pkl')
     
-    return rf_model, rf_columns, cnn_model
+    return rf_data['model'], rf_data['columns'], cnn
 
-rf_model, rf_columns, cnn_model = load_models()
+# เรียกใช้งาน
+try:
+    rf_model, rf_columns, cnn_model = load_models()
+except Exception as e:
+    st.error(f"เกิดข้อผิดพลาดในการโหลดโมเดล: {e}")
+# --------------------------------------
 
 
 st.set_page_config(page_title="AI อสังหาริมทรัพย์", layout="centered")
