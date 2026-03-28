@@ -13,11 +13,14 @@ class SafeUnpickler(pickle.Unpickler):
             return pathlib.PosixPath
         return super().find_class(module, name)
 
-def load_learner_fixed(path):
-    with open(path, 'rb') as f:
-      
+# สร้างคลาสหลอกเพื่อให้ FastAI ยอมรับเครื่องมือแกะกล่องเรา
+class CustomPickle:
+    __name__ = "pickle"
+    Unpickler = SafeUnpickler
+    def load(self, f, **kwargs):
         return SafeUnpickler(f).load()
-# ----------------------------------------------
+
+custom_pickle = CustomPickle()
 
 @st.cache_resource
 def load_models():
