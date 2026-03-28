@@ -17,9 +17,15 @@ class SafeUnpickler(pickle.Unpickler):
 class CustomPickle:
     __name__ = "pickle"
     Unpickler = SafeUnpickler
-    # ต้องรับทั้ง *args และ **kwargs เพื่อให้รองรับทุกค่าที่ PyTorch ส่งมา
+    
     def load(self, f, *args, **kwargs):
-        return SafeUnpickler(f, *args, **kwargs).load()
+        # อ่านข้อมูลทั้งหมดเข้า Memory ก่อน
+        data = f.read()
+        # เปลี่ยนข้อความ "WindowsPath" เป็น "PosixPath" ในระดับข้อมูลดิบ (Binary)
+        # วิธีนี้จะทำให้ Python ไม่รู้ตัวเลยว่าเคยมี WindowsPath อยู่
+        data = data.replace(b'pathlib\nWindowsPath', b'pathlib\nPosixPath')
+        # ส่งข้อมูลที่แก้ไขแล้วไปให้ Unpickler ปกติทำงานต่อ
+        return SafeUnpickler(io.BytesIO(data), **kwargs).load()
 
 custom_pickle = CustomPickle()
 
