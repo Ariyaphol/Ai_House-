@@ -36,6 +36,8 @@ def load_models():
     
     return rf_model, rf_columns, cnn_model
 
+rf_model, rf_columns, cnn_model = load_models()
+
 
 st.set_page_config(page_title="AI อสังหาริมทรัพย์", layout="centered")
 st.title(" ระบบ AI อสังหาริมทรัพย์อัจฉริยะ ")
