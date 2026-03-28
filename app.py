@@ -3,9 +3,6 @@ import pandas as pd
 import joblib
 from fastai.vision.all import *
 from PIL import Image
-import pickle
-import pathlib
-import io
 
 
 
