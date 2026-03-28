@@ -14,12 +14,14 @@ class WindowsPathUnpickler(pickle.Unpickler):
         return super().find_class(module, name)
 
 class CustomPickle:
+    __name__ = "custom_pickle" 
     Unpickler = WindowsPathUnpickler
-    def load(self, *args, **kwargs):
+    
+    @staticmethod
+    def load(*args, **kwargs):
         return WindowsPathUnpickler(*args, **kwargs).load()
 
-custom_pickle_module = CustomPickle()
-# --------------------------------------------------
+custom_pickle_module = CustomPickle
 
 
 
