@@ -19,7 +19,7 @@ class CustomPickle:
     Unpickler = SafeUnpickler
     # ต้องรับทั้ง *args และ **kwargs เพื่อให้รองรับทุกค่าที่ PyTorch ส่งมา
     def load(self, f, *args, **kwargs):
-        return SafeUnpickler(f, *args, **kwargs).load()
+        return SafeUnpickler(f, **kwargs).load()
 
 custom_pickle = CustomPickle()
 
