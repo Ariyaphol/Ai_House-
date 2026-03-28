@@ -8,37 +8,14 @@ import pathlib
 import io
 
 
-class SafeUnpickler(pickle.Unpickler):
-    def find_class(self, module, name):
-        if module == 'pathlib' and name == 'WindowsPath':
-            return pathlib.PosixPath
-        return super().find_class(module, name)
-
-class CustomPickle:
-    __name__ = "pickle"
-    Unpickler = SafeUnpickler
-    
-    def load(self, f, *args, **kwargs):
-        # อ่านข้อมูลทั้งหมดเข้า Memory ก่อน
-        data = f.read()
-        # เปลี่ยนข้อความ "WindowsPath" เป็น "PosixPath" ในระดับข้อมูลดิบ (Binary)
-        # วิธีนี้จะทำให้ Python ไม่รู้ตัวเลยว่าเคยมี WindowsPath อยู่
-        data = data.replace(b'pathlib\nWindowsPath', b'pathlib\nPosixPath')
-        # ส่งข้อมูลที่แก้ไขแล้วไปให้ Unpickler ปกติทำงานต่อ
-        return SafeUnpickler(io.BytesIO(data), **kwargs).load()
-
-custom_pickle = CustomPickle()
-
 
 @st.cache_resource
 def load_models():
-  
     rf_data = joblib.load('house_price_rf.pkl')
     rf_model = rf_data['model']
     rf_columns = rf_data['columns']
     
-    
-    cnn_model = load_learner('room_classifier_fastai.pkl', pickle_module=custom_pickle)
+    cnn_model = load_learner('room_classifier_fastai.pkl')
     
     return rf_model, rf_columns, cnn_model
 
