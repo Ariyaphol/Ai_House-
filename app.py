@@ -14,31 +14,27 @@ class SafeUnpickler(pickle.Unpickler):
             return pathlib.PosixPath
         return super().find_class(module, name)
 
+
 class CustomPickle:
     __name__ = "pickle"
     Unpickler = SafeUnpickler
-    
-    
     def load(self, f, **kwargs):
-       
-        return SafeUnpickler(f, **kwargs).load()
+        return SafeUnpickler(f).load()
 
 custom_pickle = CustomPickle()
 
 
 @st.cache_resource
 def load_models():
-    
+  
     rf_data = joblib.load('house_price_rf.pkl')
-    m = rf_data['model']
-    cols = rf_data['columns']
-   
-    cnn = load_learner('room_classifier_fastai.pkl', pickle_module=custom_pickle)
+    rf_model = rf_data['model']
+    rf_columns = rf_data['columns']
     
-    return m, cols, cnn
-
-
-rf_model, rf_columns, cnn_model = load_models()
+    
+    cnn_model = load_learner('room_classifier_fastai.pkl', pickle_module=custom_pickle)
+    
+    return rf_model, rf_columns, cnn_model
 
 
 st.set_page_config(page_title="AI อสังหาริมทรัพย์", layout="centered")
