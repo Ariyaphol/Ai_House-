@@ -4,6 +4,12 @@ import joblib
 from fastai.vision.all import *
 from PIL import Image
 
+import pathlib
+
+temp = pathlib.PosixPath
+pathlib.WindowsPath = pathlib.PosixPath
+
+
 # ==========================================
 # 1. โหลดสมอง AI (ใช้ @st.cache_resource เพื่อให้โหลดแค่ครั้งเดียวตอนเปิดเว็บ)
 # ==========================================
