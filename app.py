@@ -3,34 +3,43 @@ import pandas as pd
 import joblib
 from fastai.vision.all import *
 from PIL import Image
-
+import pickle
 import pathlib
 
-temp = pathlib.PosixPath
-pathlib.WindowsPath = pathlib.PosixPath
+
+class WindowsPathUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module == 'pathlib' and name == 'WindowsPath':
+            return pathlib.PosixPath
+        return super().find_class(module, name)
+
+class CustomPickle:
+    Unpickler = WindowsPathUnpickler
+    def load(self, *args, **kwargs):
+        return WindowsPathUnpickler(*args, **kwargs).load()
+
+custom_pickle_module = CustomPickle()
+# --------------------------------------------------
 
 
-# ==========================================
-# 1. โหลดสมอง AI (ใช้ @st.cache_resource เพื่อให้โหลดแค่ครั้งเดียวตอนเปิดเว็บ)
-# ==========================================
+
+
+
 @st.cache_resource
 def load_models():
-    # โหลดโมเดลทายราคาบ้าน (Random Forest)
+
     rf_data = joblib.load('house_price_rf.pkl')
     rf_model = rf_data['model']
     rf_columns = rf_data['columns']
     
-    # โหลดโมเดลทายภาพห้อง (FastAI)
-    # หมายเหตุ: ถ้าตั้งชื่อไฟล์ต่างจากนี้ ให้แก้ชื่อให้ตรงกันนะครับ
-    cnn_model = load_learner('room_classifier_fastai.pkl')
+ 
+    cnn_model = load_learner('room_classifier_fastai.pkl', pickle_module=custom_pickle_module)
     
     return rf_model, rf_columns, cnn_model
 
 rf_model, rf_columns, cnn_model = load_models()
 
-# ==========================================
-# 2. ออกแบบหน้าเว็บ (UI)
-# ==========================================
+
 st.set_page_config(page_title="AI อสังหาริมทรัพย์", layout="centered")
 st.title(" ระบบ AI อสังหาริมทรัพย์อัจฉริยะ ")
 st.markdown("ยินดีต้อนรับ! เลือกใช้งาน AI || ดูไฟล์เอกสารกดปุ่มซ้ายบน ")
@@ -55,13 +64,13 @@ with open("House_Room_Dataset.zip", "rb") as file:
           )
     
 
-# สร้างแท็บ (Tabs) 2 อันเพื่อแยกโหมดการทำงาน
+
 tab1, tab2 , tap3 , tap4 = st.tabs(["💰 ประเมินราคาบ้าน", "📸 ทายภาพห้องจากรูป" , "📁 อธิบาย 'ประเมินราคาบ้าน'" , "📁 อธิบาย 'ทายภาพห้อง'"])
 
-# --- TAB 1: ระบบทายราคาบ้าน ---
+
 with tab1:
 
-    # สร้างดิกชันนารีจับคู่ (หน้าฉากภาษาไทย : หลังฉากภาษาอังกฤษ)
+   
     loc_dict = {
         "ใจกลางกรุงเทพฯ (CBD)": "Bangkok_CBD",
         "ชานเมืองกรุงเทพฯ": "Bangkok_Suburb",
@@ -87,18 +96,18 @@ with tab1:
         bed = st.number_input("จำนวนห้องนอน", min_value=0, value=3)
         bath = st.number_input("จำนวนห้องน้ำ", min_value=0, value=2)
     with col2:
-        # ให้ User เลือกจากภาษาไทย (keys)
+        
         loc_thai = st.selectbox("ทำเลที่ตั้ง", list(loc_dict.keys()))
         shape_thai = st.selectbox("รูปแปลงที่ดิน", list(shape_dict.keys()))
         orient_thai = st.selectbox("ทิศทางหน้าบ้าน", list(orient_dict.keys()))
         
     if st.button("ประเมินราคาเลย!", type="primary"):
-        # แอบแปลงค่ากลับเป็นภาษาอังกฤษ (values) ก่อนส่งให้ AI
+       
         loc_eng = loc_dict[loc_thai]
         shape_eng = shape_dict[shape_thai]
         orient_eng = orient_dict[orient_thai]
 
-        # จัดเตรียมข้อมูลโดยใช้ตัวแปรภาษาอังกฤษ (_eng)
+      
         input_data = pd.DataFrame({
             'Area_sqm': [area], 'Bedrooms': [bed], 'Bathrooms': [bath],
             'Location': [loc_eng], 'Land_Shape': [shape_eng], 'Orientation': [orient_eng]
@@ -115,26 +124,25 @@ with tab1:
 
         
 
-# --- TAB 2: ระบบทายภาพห้อง ---
+
 with tab2:
     st.header("อัปโหลดรูปภาพเพื่อให้ AI ทายว่าเป็นห้องอะไร")
     
-    # สร้างปุ่มอัปโหลดไฟล์รูปภาพ
+   
     uploaded_file = st.file_uploader("เลือกรูปภาพห้องของคุณ...", type=["jpg", "jpeg", "png"])
     
     if uploaded_file is not None:
-        # เปิดรูปภาพและแสดงผลบนเว็บ
+       
         image = Image.open(uploaded_file)
         st.image(image, caption="รูปภาพที่คุณอัปโหลด", use_container_width=True)
         
         if st.button("ให้ AI วิเคราะห์รูปภาพ", type="primary"):
             with st.spinner("AI กำลังใช้ความคิด..."):
-                # ให้ FastAI ทายผล
-                # แปลงรูปเป็น format ที่ FastAI เข้าใจ
+              
                 img_fastai = PILImage.create(uploaded_file)
                 pred_class, pred_idx, outputs = cnn_model.predict(img_fastai)
                 
-                # ดึงความมั่นใจ (Probability) ออกมาโชว์ด้วย
+             
                 confidence = outputs[pred_idx].item() * 100
                 
                 st.success(f"🎯 AI มั่นใจ {confidence:.2f}% ว่านี่คือห้อง: **{pred_class.upper()}**")
