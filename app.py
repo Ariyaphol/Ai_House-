@@ -18,8 +18,10 @@ class CustomPickle:
     __name__ = "pickle"
     Unpickler = SafeUnpickler
     
-    def load(self, f, *args, **kwargs):
-        return SafeUnpickler(f, *args, **kwargs).load()
+    
+    def load(self, f, **kwargs):
+       
+        return SafeUnpickler(f, **kwargs).load()
 
 custom_pickle = CustomPickle()
 
