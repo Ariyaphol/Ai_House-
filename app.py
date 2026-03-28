@@ -32,6 +32,8 @@ except Exception as e:
     st.error(f"เกิดข้อผิดพลาดในการโหลดโมเดล: {e}")
 # --------------------------------------
 
+rf_model, rf_columns, cnn_model = load_models()
+
 
 st.set_page_config(page_title="AI อสังหาริมทรัพย์", layout="centered")
 st.title(" ระบบ AI อสังหาริมทรัพย์อัจฉริยะ ")
