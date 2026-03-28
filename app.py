@@ -5,37 +5,32 @@ from fastai.vision.all import *
 from PIL import Image
 import pickle
 import pathlib
+import torch
 
-
-class WindowsPathUnpickler(pickle.Unpickler):
-    def find_class(self, module, name):
+# --- แก้ไขปัญหา WindowsPath สำหรับ Python เวอร์ชันใหม่ ---
+def patched_load(self):
+    # ดักจับและเปลี่ยน WindowsPath เป็น PosixPath ระหว่างการโหลด
+    original_find_class = self.find_class
+    def custom_find_class(module, name):
         if module == 'pathlib' and name == 'WindowsPath':
             return pathlib.PosixPath
-        return super().find_class(module, name)
+        return original_find_class(module, name)
+    self.find_class = custom_find_class
+    return pickle.Unpickler.load(self)
 
-class CustomPickle:
-    __name__ = "custom_pickle" 
-    Unpickler = WindowsPathUnpickler
-    
-    @staticmethod
-    def load(*args, **kwargs):
-        return WindowsPathUnpickler(*args, **kwargs).load()
-
-custom_pickle_module = CustomPickle
-
-
-
-
+# นำไปติดตั้งในระบบการโหลดของ pickle
+pickle.Unpickler.load = patched_load
+# --------------------------------------------------
 
 @st.cache_resource
 def load_models():
-
+    # โหลดโมเดลราคาบ้าน
     rf_data = joblib.load('house_price_rf.pkl')
     rf_model = rf_data['model']
     rf_columns = rf_data['columns']
     
- 
-    cnn_model = load_learner('room_classifier_fastai.pkl', pickle_module=custom_pickle_module)
+    # โหลดโมเดล FastAI (คราวนี้ไม่ต้องใส่ pickle_module เพิ่มแล้ว เพราะเราแก้ที่ตัวระบบหลักไปแล้ว)
+    cnn_model = load_learner('room_classifier_fastai.pkl')
     
     return rf_model, rf_columns, cnn_model
 
