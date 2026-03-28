@@ -17,7 +17,7 @@ class SafeUnpickler(pickle.Unpickler):
 class CustomPickle:
     __name__ = "pickle"
     Unpickler = SafeUnpickler
-   
+    
     def load(self, f, *args, **kwargs):
         return SafeUnpickler(f, *args, **kwargs).load()
 
