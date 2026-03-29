@@ -13,29 +13,20 @@ if platform.system() != 'Windows':
 
 def label_func(x): return x  
 
-@st.cache_resource
 def load_models():
     try:
-       
-        rf_data = joblib.load('house_price_rf.pkl')
-        m = rf_data['model']
-        cols = rf_data['columns'] 
-        
+        # โหลดไฟล์ที่เซฟแบบ Pipeline (รวมขั้นตอน Impute และ Encoding ไว้แล้ว)
+        rf_data = joblib.load('house_price_ensemble.pkl') 
+        pipeline = rf_data['full_pipeline']
         
         cnn = load_learner('room_classifier_fastai.pkl')
-        
-        return m, cols, cnn
+        return pipeline, cnn
     except Exception as e:
-       
-        return None, None, None
+        st.error(f"Error loading models: {e}")
+        return None, None
 
+rf_pipeline, cnn_model = load_models()
 
-rf_model, rf_columns, cnn_model = load_models()
-
-
-if rf_model is None or rf_columns is None:
-    st.error("❌ ไม่สามารถโหลดไฟล์โมเดลได้ กรุณาตรวจสอบว่ามีไฟล์ .pkl อยู่ใน GitHub หรือไม่")
-    st.stop() 
 
 
 
@@ -73,26 +64,20 @@ with tab1:
         orient_thai = st.selectbox("ทิศทางหน้าบ้าน", list(orient_dict.keys()))
         
     if st.button("ประเมินราคาเลย!", type="primary"):
-        
-        input_dict = {
-            'Area_sqm': [area],
-            'Bedrooms': [bed],
-            'Bathrooms': [bath],
-            'Location': [loc_dict[loc_thai]], 
-            'Land_Shape': [shape_dict[shape_thai]], 
-            'Orientation': [orient_dict[orient_thai]]
-        }
-        input_data = pd.DataFrame(input_dict)
-
-        
-        encoded_data = pd.get_dummies(input_data)
-
-     
-        ready_data = encoded_data.reindex(columns=rf_columns, fill_value=0)
+        # สร้าง DataFrame จาก Input ตรงๆ (ไม่ต้องแปลงเป็นตัวเลขเอง)
+        input_data = pd.DataFrame([{
+            'Area_sqm': area,
+            'Bedrooms': bed,
+            'Bathrooms': bath,
+            'Location': loc_dict[loc_thai], 
+            'Land_Shape': shape_dict[shape_thai], 
+            'Orientation': orient_dict[orient_thai]
+        }])
 
         try:
-            price = rf_model.predict(ready_data)[0]
-            st.balloons() # แสดงเอฟเฟกต์ฉลองความสำเร็จ
+            # สั่ง predict ผ่าน pipeline ได้เลย มันจะทำ One-Hot ให้เองข้างใน
+            price = rf_pipeline.predict(input_data)[0]
+            st.balloons()
             st.success(f"🎯 AI ประเมินราคาบ้านหลังนี้อยู่ที่: **{price:,.0f} บาท**")
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
