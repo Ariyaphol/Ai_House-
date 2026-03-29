@@ -71,20 +71,29 @@ with tab1:
         orient_thai = st.selectbox("ทิศทางหน้าบ้าน", list(orient_dict.keys()))
         
     if st.button("ประเมินราคาเลย!", type="primary"):
-        if model_ready: # เช็คก่อนว่าโหลดโมเดลสำเร็จไหม
-            input_data = pd.DataFrame({
-                'Area_sqm': [area], 'Bedrooms': [bed], 'Bathrooms': [bath],
-                'Location': [loc_dict[loc_thai]], 
-                'Land_Shape': [shape_dict[shape_thai]], 
-                'Orientation': [orient_dict[orient_thai]]
-        })
+        
+        input_dict = {
+            'Area_sqm': [area],
+            'Bedrooms': [bed],
+            'Bathrooms': [bath],
+            'Location': [loc_dict[loc_thai]], 
+            'Land_Shape': [shape_dict[shape_thai]], 
+            'Orientation': [orient_dict[orient_thai]]
+        }
+        input_data = pd.DataFrame(input_dict)
+
+        
         encoded_data = pd.get_dummies(input_data)
-        # ตอนนี้ rf_columns จะไม่ NameError แล้ว
+
+     
         ready_data = encoded_data.reindex(columns=rf_columns, fill_value=0)
-        price = rf_model.predict(ready_data)[0]
-        st.success(f"🎯 AI ประเมินราคาบ้านหลังนี้อยู่ที่: **{price:,.0f} บาท**")
-    else:
-        st.warning("ขออภัย โมเดลยังไม่พร้อมใช้งาน กรุณาตรวจสอบไฟล์ .pkl")
+
+        try:
+            price = rf_model.predict(ready_data)[0]
+            st.balloons() # แสดงเอฟเฟกต์ฉลองความสำเร็จ
+            st.success(f"🎯 AI ประเมินราคาบ้านหลังนี้อยู่ที่: **{price:,.0f} บาท**")
+        except Exception as e:
+            st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
 
 with tab2:
     st.header("📸 ทายภาพห้องจากรูป")
