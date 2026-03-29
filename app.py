@@ -14,26 +14,18 @@ if platform.system() != 'Windows':
 def label_func(x): return x  
 
 @st.cache_resource
-def load_models():
-    try:
-        # 1. โหลดไฟล์ House Price (ต้องมั่นใจว่าชื่อไฟล์ตรงกับที่เซฟไว้)
-        rf_data = joblib.load('house_price_ensemble.pkl') 
+def load_rf_model():
+    return joblib.load('house_price_ensemble.pkl')
+
+rf_data = load_rf_model()
         
-        # ตรวจสอบว่าใน dict มี key ชื่อ 'model' หรือ 'full_pipeline'
-        # จากโค้ดที่คุณเซฟก่อนหน้านี้ ต้องดึงให้ถูกตัว
-        m = rf_data.get('model') or rf_data.get('full_pipeline')
-        cols = rf_data.get('columns')
+
+rf_model = rf_data.get('model') or rf_data.get('full_pipeline')
+rf_columns = rf_data.get('columns')
         
-        # 2. โหลดไฟล์ Image Classifier
-        cnn = load_learner('room_classifier_fastai.pkl')
+
+cnn_model = load_learner('room_classifier_fastai.pkl')
         
-        return m, cols, cnn
-    except Exception as e:
-        # พิมพ์ Error ออกมาดูที่หน้า App เลยว่าทำไมโหลดไม่ได้
-        st.error(f"รายละเอียด Error ตอนโหลด: {e}")
-        return m, cols, cnn
-    
-rf_model, rf_columns, cnn_model = load_models()
 
 
 
