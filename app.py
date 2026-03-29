@@ -31,7 +31,7 @@ def load_models():
     except Exception as e:
         # พิมพ์ Error ออกมาดูที่หน้า App เลยว่าทำไมโหลดไม่ได้
         st.error(f"รายละเอียด Error ตอนโหลด: {e}")
-        return None, None, None
+        return m, cols, cnn
     
 rf_model, rf_columns, cnn_model = load_models()
 
