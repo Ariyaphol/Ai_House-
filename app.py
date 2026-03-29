@@ -6,34 +6,36 @@ from PIL import Image
 import pathlib
 import platform
 
-# --- ส่วนแก้ปัญหา Path และการโหลดโมเดล ---
+
 if platform.system() != 'Windows':
     pathlib.WindowsPath = pathlib.PosixPath
 
-# สำคัญมาก: สร้างฟังก์ชันหลอกสำหรับ DataLoaders 
-# เพื่อให้ fastai โหลดโมเดลผ่านโดยไม่สนเรื่อง dls เก่า
+
 def label_func(x): return x  
 
 @st.cache_resource
 def load_models():
-    
-    rf_data = joblib.load('house_price_rf.pkl')
-    m = rf_data['model']
-    cols = rf_data['columns']
-    
-   
-    cnn = load_learner('room_classifier_fastai.pkl')
-    
-    return m, cols, cnn
+    try:
+       
+        rf_data = joblib.load('house_price_rf.pkl')
+        m = rf_data['model']
+        cols = rf_data['columns'] 
+        
+        
+        cnn = load_learner('room_classifier_fastai.pkl')
+        
+        return m, cols, cnn
+    except Exception as e:
+       
+        return None, None, None
 
 
-try:
-    rf_model, rf_columns, cnn_model = load_models()
-    model_ready = True
-except Exception as e:
-    st.error(f"⚠️ ระบบกำลังเตรียมโมเดล หรือเกิดข้อผิดพลาด: {e}")
-    model_ready = False
-# --------------------------------------
+rf_model, rf_columns, cnn_model = load_models()
+
+
+if rf_model is None or rf_columns is None:
+    st.error("❌ ไม่สามารถโหลดไฟล์โมเดลได้ กรุณาตรวจสอบว่ามีไฟล์ .pkl อยู่ใน GitHub หรือไม่")
+    st.stop() 
 
 
 
