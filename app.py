@@ -16,20 +16,23 @@ def label_func(x): return x
 
 @st.cache_resource
 def load_models():
-    # 1. โหลดโมเดลราคาบ้าน
-    rf_data = joblib.load('house_price_rf.pkl')
     
-    # 2. โหลดโมเดล FastAI
-    # ใช้ load_learner ปกติได้เลยหลังจากที่เราแก้ pathlib ด้านบนแล้ว
+    rf_data = joblib.load('house_price_rf.pkl')
+    m = rf_data['model']
+    cols = rf_data['columns']
+    
+   
     cnn = load_learner('room_classifier_fastai.pkl')
     
-    return rf_data['model'], rf_data['columns'], cnn
+    return m, cols, cnn
 
-# เรียกใช้งาน
+
 try:
     rf_model, rf_columns, cnn_model = load_models()
+    model_ready = True
 except Exception as e:
-    st.error(f"เกิดข้อผิดพลาดในการโหลดโมเดล: {e}")
+    st.error(f"⚠️ ระบบกำลังเตรียมโมเดล หรือเกิดข้อผิดพลาด: {e}")
+    model_ready = False
 # --------------------------------------
 
 
@@ -68,14 +71,20 @@ with tab1:
         orient_thai = st.selectbox("ทิศทางหน้าบ้าน", list(orient_dict.keys()))
         
     if st.button("ประเมินราคาเลย!", type="primary"):
-        input_data = pd.DataFrame({
-            'Area_sqm': [area], 'Bedrooms': [bed], 'Bathrooms': [bath],
-            'Location': [loc_dict[loc_thai]], 'Land_Shape': [shape_dict[shape_thai]], 'Orientation': [orient_dict[orient_thai]]
+        if model_ready: # เช็คก่อนว่าโหลดโมเดลสำเร็จไหม
+            input_data = pd.DataFrame({
+                'Area_sqm': [area], 'Bedrooms': [bed], 'Bathrooms': [bath],
+                'Location': [loc_dict[loc_thai]], 
+                'Land_Shape': [shape_dict[shape_thai]], 
+                'Orientation': [orient_dict[orient_thai]]
         })
         encoded_data = pd.get_dummies(input_data)
+        # ตอนนี้ rf_columns จะไม่ NameError แล้ว
         ready_data = encoded_data.reindex(columns=rf_columns, fill_value=0)
         price = rf_model.predict(ready_data)[0]
         st.success(f"🎯 AI ประเมินราคาบ้านหลังนี้อยู่ที่: **{price:,.0f} บาท**")
+    else:
+        st.warning("ขออภัย โมเดลยังไม่พร้อมใช้งาน กรุณาตรวจสอบไฟล์ .pkl")
 
 with tab2:
     st.header("📸 ทายภาพห้องจากรูป")
