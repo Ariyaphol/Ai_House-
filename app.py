@@ -13,19 +13,27 @@ if platform.system() != 'Windows':
 
 def label_func(x): return x  
 
+@st.cache_resource
 def load_models():
     try:
-        # โหลดไฟล์ที่เซฟแบบ Pipeline (รวมขั้นตอน Impute และ Encoding ไว้แล้ว)
+        # 1. โหลดไฟล์ House Price (ต้องมั่นใจว่าชื่อไฟล์ตรงกับที่เซฟไว้)
         rf_data = joblib.load('house_price_ensemble.pkl') 
-        pipeline = rf_data['full_pipeline']
         
+        # ตรวจสอบว่าใน dict มี key ชื่อ 'model' หรือ 'full_pipeline'
+        # จากโค้ดที่คุณเซฟก่อนหน้านี้ ต้องดึงให้ถูกตัว
+        m = rf_data.get('model') or rf_data.get('full_pipeline')
+        cols = rf_data.get('columns')
+        
+        # 2. โหลดไฟล์ Image Classifier
         cnn = load_learner('room_classifier_fastai.pkl')
-        return pipeline, cnn
+        
+        return m, cols, cnn
     except Exception as e:
-        st.error(f"Error loading models: {e}")
-        return None, None
-
-rf_pipeline, cnn_model = load_models()
+        # พิมพ์ Error ออกมาดูที่หน้า App เลยว่าทำไมโหลดไม่ได้
+        st.error(f"รายละเอียด Error ตอนโหลด: {e}")
+        return None, None, None
+    
+rf_model, rf_columns, cnn_model = load_models()
 
 
 
@@ -64,23 +72,33 @@ with tab1:
         orient_thai = st.selectbox("ทิศทางหน้าบ้าน", list(orient_dict.keys()))
         
     if st.button("ประเมินราคาเลย!", type="primary"):
-        # สร้าง DataFrame จาก Input ตรงๆ (ไม่ต้องแปลงเป็นตัวเลขเอง)
-        input_data = pd.DataFrame([{
-            'Area_sqm': area,
-            'Bedrooms': bed,
-            'Bathrooms': bath,
-            'Location': loc_dict[loc_thai], 
-            'Land_Shape': shape_dict[shape_thai], 
-            'Orientation': orient_dict[orient_thai]
-        }])
-
-        try:
-            # สั่ง predict ผ่าน pipeline ได้เลย มันจะทำ One-Hot ให้เองข้างใน
-            price = rf_pipeline.predict(input_data)[0]
-            st.balloons()
-            st.success(f"🎯 AI ประเมินราคาบ้านหลังนี้อยู่ที่: **{price:,.0f} บาท**")
-        except Exception as e:
-            st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
+        if rf_model is not None: # เช็คว่าโมเดลถูกโหลดมาจริงๆ
+            input_dict = {
+                'Area_sqm': [area],
+                'Bedrooms': [bed],
+                'Bathrooms': [bath],
+                'Location': [loc_dict[loc_thai]], 
+                'Land_Shape': [shape_dict[shape_thai]], 
+                'Orientation': [orient_dict[orient_thai]]
+            }
+            input_data = pd.DataFrame(input_dict)
+            
+            # ถ้าคุณเซฟเป็น Pipeline มา (ตามที่แนะนำก่อนหน้า) 
+            # ไม่ต้องทำ get_dummies เอง สั่ง predict ได้เลย
+            try:
+                # ลองเช็คว่าโมเดลเป็น Pipeline หรือโมเดลเปล่าๆ
+                if hasattr(rf_model, 'feature_names_in_'): # ถ้าเป็น model สดๆ
+                     ready_data = pd.get_dummies(input_data).reindex(columns=rf_columns, fill_value=0)
+                     price = rf_model.predict(ready_data)[0]
+                else: # ถ้าเป็น Pipeline
+                     price = rf_model.predict(input_data)[0]
+                
+                st.balloons()
+                st.success(f"🎯 ราคาประเมิน: **{price:,.0f} บาท**")
+            except Exception as e:
+                st.error(f"เกิดข้อผิดพลาดในการคำนวณ: {e}")
+        else:
+            st.warning("⚠️ โมเดลยังไม่ได้ถูกโหลด กรุณาตรวจสอบไฟล์ .pkl")
 
 with tab2:
     st.header("📸 ทายภาพห้องจากรูป")
