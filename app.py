@@ -5,6 +5,8 @@ from fastai.vision.all import *
 from PIL import Image
 import pathlib
 import platform
+import torch
+from torchvision import transforms
 
 
 if platform.system() != 'Windows':
@@ -99,19 +101,37 @@ with tab2:
         st.image(image, caption="รูปที่อัปโหลด", use_container_width=True)
         if st.button("ให้ AI วิเคราะห์รูปภาพ"):
             if cnn_model is not None:
-                # ----------------------------------------------------
-                # 🚨 ท่าไม้ตายสุดยอด: ไม่แตะต้อง uploaded_file แล้ว
-                # เอาตัวแปร image ที่โชว์บนจอ มาแปลงสีมาตรฐาน (RGB) แล้วเซฟใหม่เลย!
-                temp_path = "temp_image.jpg"
-                image.convert('RGB').save(temp_path)
-                
                 try:
-                    # ให้ FastAI อ่านรูปจากไฟล์ที่เราเพิ่งวาดใหม่
-                    pred_class, pred_idx, outputs = cnn_model.predict(temp_path)
-                    st.success(f"🎯 AI มั่นใจ {outputs[pred_idx].item()*100:.2f}% ว่าคือ: **{pred_class.upper()}**")
+                    # ----------------------------------------------------
+                    # 🚨 ท่าทะลวง PyTorch: ข้าม PILBase ของ FastAI ไปเลย!
+                    
+                    # 1. ดึงสมอง AI ตัวจริง (PyTorch Model) ออกมา และตั้งโหมดทำนาย (eval)
+                    pytorch_model = cnn_model.model.eval()
+                    vocab = cnn_model.dls.vocab # ดึงรายชื่อหมวดหมู่ห้อง
+                    
+                    # 2. สร้างเครื่องมือย่อและแปลงสีรูปภาพแบบมาตรฐาน PyTorch
+                    transform = transforms.Compose([
+                        transforms.Resize((224, 224)),
+                        transforms.ToTensor(),
+                        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+                    ])
+                    
+                    # 3. เอาตัวแปร image ที่โชว์บนเว็บอยู่แล้ว มาแปลงเป็น Tensor (ตัวเลข 4 มิติ)
+                    img_tensor = transform(image.convert('RGB')).unsqueeze(0)
+                    
+                    # 4. ป้อนเข้าสมอง AI โดยตรง
+                    with torch.no_grad():
+                        preds = pytorch_model(img_tensor)
+                        probs = torch.nn.functional.softmax(preds[0], dim=0) # แปลงผลลัพธ์เป็น %
+                        
+                        pred_idx = torch.argmax(probs).item() # หาตำแหน่งที่ % เยอะสุด
+                        pred_class = vocab[pred_idx] # เทียบชื่อห้อง
+                        confidence = probs[pred_idx].item() * 100
+                    
+                    st.success(f"🎯 AI มั่นใจ {confidence:.2f}% ว่าคือ: **{pred_class.upper()}**")
+                    # ----------------------------------------------------
                 except Exception as e:
-                    st.error(f"เกิดข้อผิดพลาดตอนทำนาย: {e}")
-                # ----------------------------------------------------
+                    st.error(f"เกิดข้อผิดพลาดตอนทำนาย (PyTorch): {e}")
             else:
                 st.warning("⚠️ โมเดลวิเคราะห์ภาพมีปัญหา (โหลดไม่ขึ้น) ไม่สามารถทำนายได้ครับ")
 
