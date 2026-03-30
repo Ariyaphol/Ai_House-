@@ -64,7 +64,7 @@ with tab1:
         orient_thai = st.selectbox("ทิศทางหน้าบ้าน", list(orient_dict.keys()))
         
     if st.button("ประเมินราคาเลย!", type="primary"):
-        if rf_model is not None: # เช็คว่าโมเดลถูกโหลดมาจริงๆ
+        if rf_model is not None: # 
             input_dict = {
                 'Area_sqm': [area],
                 'Bedrooms': [bed],
@@ -75,14 +75,13 @@ with tab1:
             }
             input_data = pd.DataFrame(input_dict)
             
-            # ถ้าคุณเซฟเป็น Pipeline มา (ตามที่แนะนำก่อนหน้า) 
-            # ไม่ต้องทำ get_dummies เอง สั่ง predict ได้เลย
+            
             try:
-                # ลองเช็คว่าโมเดลเป็น Pipeline หรือโมเดลเปล่าๆ
+               
                 if hasattr(rf_model, 'feature_names_in_'): # ถ้าเป็น model สดๆ
                      ready_data = pd.get_dummies(input_data).reindex(columns=rf_columns, fill_value=0)
                      price = rf_model.predict(ready_data)[0]
-                else: # ถ้าเป็น Pipeline
+                else: 
                      price = rf_model.predict(input_data)[0]
                 
                 st.balloons()
@@ -100,12 +99,10 @@ with tab2:
         st.image(image, caption="รูปที่อัปโหลด", use_container_width=True)
         if st.button("ให้ AI วิเคราะห์รูปภาพ"):
             if cnn_model is not None:
-                # ----------------------------------------------------
-                # 🚨 จุดที่แก้: ใช้ .getvalue() เพื่อดึงข้อมูลภาพดิบๆ ส่งให้ AI
-                # ป้องกันปัญหา Streamlit อ่านไฟล์จนทะลุหน้าสุดท้าย
-                raw_bytes = uploaded_file.getvalue()
-                img_fastai = PILImage.create(raw_bytes)
-                # ----------------------------------------------------
+                
+                img_array = np.array(image)
+                img_fastai = PILImage.create(img_array)
+               
                 
                 pred_class, pred_idx, outputs = cnn_model.predict(img_fastai)
                 st.success(f"🎯 AI มั่นใจ {outputs[pred_idx].item()*100:.2f}% ว่าคือ: **{pred_class.upper()}**")
