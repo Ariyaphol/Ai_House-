@@ -100,12 +100,17 @@ with tab2:
         if st.button("ให้ AI วิเคราะห์รูปภาพ"):
             if cnn_model is not None:
                 
-                img_array = np.array(image)
-                img_fastai = PILImage.create(img_array)
-               
+                temp_path = "temp_uploaded_img.jpg"
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
                 
-                pred_class, pred_idx, outputs = cnn_model.predict(img_fastai)
-                st.success(f"🎯 AI มั่นใจ {outputs[pred_idx].item()*100:.2f}% ว่าคือ: **{pred_class.upper()}**")
+                
+                try:
+                    pred_class, pred_idx, outputs = cnn_model.predict(temp_path)
+                    st.success(f"🎯 AI มั่นใจ {outputs[pred_idx].item()*100:.2f}% ว่าคือ: **{pred_class.upper()}**")
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาดตอนทำนาย: {e}")
+                # ----------------------------------------------------
             else:
                 st.warning("⚠️ โมเดลวิเคราะห์ภาพมีปัญหา (โหลดไม่ขึ้น) ไม่สามารถทำนายได้ครับ")
 
