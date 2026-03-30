@@ -99,9 +99,18 @@ with tab2:
         image = Image.open(uploaded_file)
         st.image(image, caption="รูปที่อัปโหลด", use_container_width=True)
         if st.button("ให้ AI วิเคราะห์รูปภาพ"):
-            img_fastai = PILImage.create(uploaded_file)
-            pred_class, pred_idx, outputs = cnn_model.predict(img_fastai)
-            st.success(f"🎯 AI มั่นใจ {outputs[pred_idx].item()*100:.2f}% ว่าคือ: **{pred_class.upper()}**")
+            if cnn_model is not None:
+                # ----------------------------------------------------
+                # 🚨 จุดที่แก้: ใช้ .getvalue() เพื่อดึงข้อมูลภาพดิบๆ ส่งให้ AI
+                # ป้องกันปัญหา Streamlit อ่านไฟล์จนทะลุหน้าสุดท้าย
+                raw_bytes = uploaded_file.getvalue()
+                img_fastai = PILImage.create(raw_bytes)
+                # ----------------------------------------------------
+                
+                pred_class, pred_idx, outputs = cnn_model.predict(img_fastai)
+                st.success(f"🎯 AI มั่นใจ {outputs[pred_idx].item()*100:.2f}% ว่าคือ: **{pred_class.upper()}**")
+            else:
+                st.warning("⚠️ โมเดลวิเคราะห์ภาพมีปัญหา (โหลดไม่ขึ้น) ไม่สามารถทำนายได้ครับ")
 
 with tab3:
     st.header("1. การเตรียมข้อมูล (Data Preparation)")
