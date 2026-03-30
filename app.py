@@ -99,13 +99,14 @@ with tab2:
         st.image(image, caption="รูปที่อัปโหลด", use_container_width=True)
         if st.button("ให้ AI วิเคราะห์รูปภาพ"):
             if cnn_model is not None:
-                
-                temp_path = "temp_uploaded_img.jpg"
-                with open(temp_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                
+                # ----------------------------------------------------
+                # 🚨 ท่าไม้ตายสุดยอด: ไม่แตะต้อง uploaded_file แล้ว
+                # เอาตัวแปร image ที่โชว์บนจอ มาแปลงสีมาตรฐาน (RGB) แล้วเซฟใหม่เลย!
+                temp_path = "temp_image.jpg"
+                image.convert('RGB').save(temp_path)
                 
                 try:
+                    # ให้ FastAI อ่านรูปจากไฟล์ที่เราเพิ่งวาดใหม่
                     pred_class, pred_idx, outputs = cnn_model.predict(temp_path)
                     st.success(f"🎯 AI มั่นใจ {outputs[pred_idx].item()*100:.2f}% ว่าคือ: **{pred_class.upper()}**")
                 except Exception as e:
